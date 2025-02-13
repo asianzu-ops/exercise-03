@@ -1,0 +1,117 @@
+---
+title: "exercise-03"
+format: html
+editor: visual
+---
+#Exercise-03 Tasks. 
+```{r}
+#Loading and reading file
+library(tidyverse)
+f <-"https://raw.githubusercontent.com/difiore/ada-datasets/main/data-wrangling.csv"
+d <- read.csv(f, header = TRUE)
+d
+names(d)
+```
+#Creating New Variables
+
+```{r}
+BSD <- d$Body_mass_male_mean/ d$Body_mass_female_mean
+Adult.males <- sum(d$AdultMales, na.rm = TRUE)
+Adult.females<- sum(d$AdultFemale, na.rm = TRUE)
+Sex_ratio <- Adult.males / Adult.females
+Sex_ratio
+
+#Creating a variable, Defensibility Index
+d$radius <- sqrt(d$HomeRange_km2/ pi)
+d$diameter <- d$radius * 2
+DI <- d$DayLength_km / d$diameter
+DI
+```
+#Plotting Relationships 
+```{r}
+library(ggplot2)
+library(dplyr)
+str(d)
+#Removing NA values
+clean_d <- d %>% filter(!is.na(DayLength_km)&!is.na(Move))
+#Plotting relationship
+ggplot(clean_d, aes(x=Move, y= DayLength_km)) + labs(x = "Time Spent Moving (km)", y = "Day Range Length (km)") +
+  theme_minimal() +
+  ggtitle("Relationship Between Day Range Length and Time Spent Moving")
+#Facet by family
+
+ggplot(clean_d, aes(x=Move, y= DayLength_km)) + geom_point() + facet_wrap(~Family) + labs(x = "Time Spent Moving (km)", y = "Day Range Length (km)") +
+  theme_minimal() +
+  ggtitle("Relationship By Primate Family")
+#Transformed variables
+ggplot(clean_d, aes(x=log(Move), y= log(DayLength_km))) + geom_point() + facet_wrap(~Family) + labs(x = "log(Time Spent Moving (km)", y = "log(Day Range Length (km)") +
+  theme_minimal() +
+  ggtitle("Log- transformed Relationship By Primate Family")
+#Plotting by MeanGroupSize and DayLength_km by Family 
+ggplot(clean_d, aes(x= MeanGroupSize, y= DayLength_km)) + geom_point() + facet_wrap(~ Family) + labs(x = "MeanGroupSize", y = "Day Range Length (km)") +
+  theme_minimal() +
+  ggtitle(" Relationship By Primate Family")
+#Transformed variables
+ggplot(clean_d, aes(x=log(MeanGroupSize) , y=log(DayLength_km)) ) + geom_point() + facet_wrap(~ Family) + labs(x = "Log(MeanGroupSize)", y = "Log(Day Range Length (km)") +
+  theme_minimal() +
+  ggtitle(" Log-Transfromed Relationship By Primate Family")
+#Day range and Overall group size by Family
+
+d$Body_size_dimorphism <- d$Body_mass_male_mean / d$Body_mass_female_mean
+ggplot(d, aes(x = Body_size_dimorphism, y = Canine_Dimorphism)) +
+  geom_point(aes(color = Family), size = 3, alpha = 0.6) +  # Points colored by Family
+  geom_smooth(method = "lm", aes(color = Family), se = FALSE) + # Add linear regression line
+  theme_minimal() +
+  labs(x = "Body Size Dimorphism", y = "Canine Size Dimorphism", title = "Relationship Between Canine and Body Size Dimorphism")
+
+#Plot by Family Facets
+ggplot(d, aes(x = Body_size_dimorphism, y = Canine_Dimorphism)) +
+  geom_point(aes(color = Family), size = 3, alpha = 0.6) +
+  geom_smooth(method = "lm", aes(color = Family), se = FALSE) +
+  theme_minimal() +
+  facet_wrap(~ Family) +  # Facet by Family
+  labs(x = "Body Size Dimorphism", y = "Canine Size Dimorphism", title = "Canine and Body Size Dimorphism by Family")
+```
+
+```{r}
+# Create the 'diet_strategy' variable
+d$diet_strategy <- NA  # Initialize the new variable
+
+# Assign 'diet_strategy' based on fruit and leaf percentages
+d$diet_strategy <- ifelse(d$Fruit > 50, "frugivore", d$diet_strategy)
+d$diet_strategy <- ifelse(d$Leaves > 50, "folivore", d$diet_strategy)
+
+# If neither condition is true and diet data are available, assign 'omnivore'
+d$diet_strategy[!is.na(d$Fruit) & !is.na(d$Leaves) & d$diet_strategy %in% c("frugivore", "folivore")] <- "omnivore"
+
+# Create the boxplot of group size by diet strategy, omitting NA category
+library(ggplot2)
+
+# Alternative 
+
+mutate(d, diet_strategy = ifelse(Fruit >= 50, "frugivore", ifelse(Leaves >= 50, "folivore",
+    ifelse(Fruit < 50 & Leaves < 50, "omnivore", NA))))
+
+mutate(d, diet_strategy = case_when(Fruit >= 50 ~ "frugivore", Leaves >= 50 ~ "folivore",
+    Fruit < 50 & Leaves < 50 ~ "omnivore", TRUE ~ NA))
+ 
+```
+#Question 8 
+
+```{r}
+library(dplyr)
+ # Start the data pipeline with the dataframe
+d %>%
+  mutate(Binomial = paste(Genus, Species)) %>% #Create a new column 'Binomial'
+  select(Binomial, Family, Brain_Size_Species_Mean, Body_mass_male_mean) %>%  #Retaining the needed columns
+  group_by(Family) %>% #Group the data by 'Family' so we can summarize within each group
+  summarise(
+    avg_brain_size = mean(Brain_Size_Species_Mean, na.rm = TRUE),#Calculate average brain size per family, ignoring NA values
+    avg_body_mass = mean(Body_mass_male_mean, na.rm = TRUE) #Calculate average male body mass per family, ignoring NA values
+  ) %>%
+  arrange(avg_brain_size) %>% #Arrange (sort) the results in increasing order of average brain size
+
+  print() 
+
+```
+  
